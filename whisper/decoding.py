@@ -113,6 +113,8 @@ class DecodingOptions:
     # implementation details
     fp16: bool = True  # use fp16 for most of the calculation
 
+    additional_special_features: Optional[List[str]] = None
+
 
 @dataclass(frozen=True)
 class DecodingResult:
@@ -532,7 +534,7 @@ class DecodingTask:
         if self.options.without_timestamps:
             self.sot_sequence = tokenizer.sot_sequence_including_notimestamps
 
-        self.initial_tokens: Tuple[int] = self._get_initial_tokens()
+        self.initial_tokens: Tuple[int] = self._get_initial_tokens(options.additional_special_features)
         self.sample_begin: int = len(self.initial_tokens)
         self.sot_index: int = self.initial_tokens.index(tokenizer.sot)
 
@@ -584,8 +586,11 @@ class DecodingTask:
 
         return options
 
-    def _get_initial_tokens(self) -> Tuple[int]:
+    def _get_initial_tokens(self, additional_special_features: Optional[List[str]] = None) -> Tuple[int]:
         tokens = list(self.sot_sequence)
+
+        if additional_special_features:
+            tokens += [self.tokenizer.encode(t) for t in additional_special_features]
 
         if prefix := self.options.prefix:
             prefix_tokens = (

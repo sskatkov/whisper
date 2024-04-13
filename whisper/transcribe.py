@@ -157,6 +157,7 @@ def transcribe(
         num_languages=model.num_languages,
         language=language,
         task=task,
+        additional_special_tokens=decode_options["additional_special_tokens"],
     )
 
     if isinstance(clip_timestamps, str):

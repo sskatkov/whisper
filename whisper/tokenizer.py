@@ -328,7 +328,7 @@ class Tokenizer:
 
 
 @lru_cache(maxsize=None)
-def get_encoding(name: str = "gpt2", num_languages: int = 99):
+def get_encoding(name: str = "gpt2", num_languages: int = 99, additional_special_tokens: Optional[Tuple[str]] = None):
     vocab_path = os.path.join(os.path.dirname(__file__), "assets", f"{name}.tiktoken")
     ranks = {
         base64.b64decode(token): int(rank)
@@ -347,6 +347,7 @@ def get_encoding(name: str = "gpt2", num_languages: int = 99):
         "<|startofprev|>",
         "<|nospeech|>",
         "<|notimestamps|>",
+        *additional_special_tokens,
         *[f"<|{i * 0.02:.2f}|>" for i in range(1501)],
     ]
 
@@ -370,6 +371,7 @@ def get_tokenizer(
     num_languages: int = 99,
     language: Optional[str] = None,
     task: Optional[str] = None,  # Literal["transcribe", "translate", None]
+    additional_special_tokens: Optional[List[str]] = None
 ) -> Tokenizer:
     if language is not None:
         language = language.lower()
@@ -388,7 +390,8 @@ def get_tokenizer(
         language = None
         task = None
 
-    encoding = get_encoding(name=encoding_name, num_languages=num_languages)
+    encoding = get_encoding(name=encoding_name, num_languages=num_languages,
+                            additional_special_tokens=additional_special_tokens)
 
     return Tokenizer(
         encoding=encoding, num_languages=num_languages, language=language, task=task

@@ -219,9 +219,10 @@ class TextDecoder(nn.Module):
 
 
 class Whisper(nn.Module):
-    def __init__(self, dims: ModelDimensions):
+    def __init__(self, dims: ModelDimensions, vocab_threshold: int = 51865):
         super().__init__()
         self.dims = dims
+        self.vocab_threshold = vocab_threshold
         self.encoder = AudioEncoder(
             self.dims.n_mels,
             self.dims.n_audio_ctx,
@@ -270,11 +271,30 @@ class Whisper(nn.Module):
 
     @property
     def is_multilingual(self):
-        return self.dims.n_vocab >= 51865
+        return self.dims.n_vocab >= self.vocab_threshold
 
     @property
     def num_languages(self):
-        return self.dims.n_vocab - 51765 - int(self.is_multilingual)
+        return self.dims.n_vocab - (self.vocab_threshold - 100) - int(self.is_multilingual)
+
+    def change_vocab_size(self, n_vocab: int, keep_weights: bool = False):
+        if n_vocab == self.dims.n_vocab:
+            return
+
+        self.vocab_threshold += n_vocab - self.dims.n_vocab
+
+        if n_vocab < self.dims.n_vocab:
+            self.decoder.token_embedding = nn.Embedding(n_vocab, self.dims.n_text_state)
+            self.dims.n_vocab = n_vocab
+        else:
+            if keep_weights:
+                old_weights = self.decoder.token_embedding.weight
+                new_weights = nn.Embedding(n_vocab, self.dims.n_text_state)
+                new_weights.weight[:self.dims.n_vocab] = old_weights
+                self.decoder.token_embedding = new_weights
+            else:
+                self.decoder.token_embedding = nn.Embedding(n_vocab, self.dims.n_text_state)
+            self.dims.n_vocab = n_vocab
 
     def install_kv_cache_hooks(self, cache: Optional[dict] = None):
         """
